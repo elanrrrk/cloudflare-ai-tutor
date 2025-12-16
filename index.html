@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Проверка Кейсов</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        textarea { width: 100%; height: 150px; margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: inherit; }
+        button { background: #f6821f; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        button:hover { background: #e06b0d; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #result { margin-top: 20px; padding: 15px; background: #f0f9ff; border-left: 4px solid #f6821f; border-radius: 4px; display: none; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Решение бизнес-кейса</h2>
+    
+    <!-- Скрытый текст кейса -->
+    <div id="caseData" style="display:none">
+        Компания "StarCoffee" хочет открыть точки в метро. 
+        Риски: высокая аренда, сложная логистика. 
+        Задание: Опишите 3 главных риска и способы их минимизации.
+    </div>
+
+    <p>Прочитайте кейс и напишите ваше решение:</p>
+    <textarea id="answer" placeholder="Мое решение..."></textarea>
+    <button id="btn" onclick="sendData()">Проверить решение</button>
+    <div id="result"></div>
+</div>
+
+<script>
+    async function sendData() {
+        const btn = document.getElementById('btn');
+        const resDiv = document.getElementById('result');
+        const answer = document.getElementById('answer').value;
+        const caseText = document.getElementById('caseData').innerText;
+
+        if(answer.length < 5) return alert("Напишите хоть что-нибудь!");
+
+        btn.disabled = true;
+        btn.innerText = "Анализирую...";
+        resDiv.style.display = 'none';
+
+        try {
+            // Отправляем на наш Cloudflare Backend
+            const req = await fetch('/api/check', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ solution: answer, case_text: caseText })
+            });
+            
+            const data = await req.json();
+            
+            if(data.error) {
+                resDiv.innerHTML = "Ошибка: " + data.error;
+            } else {
+                // Преобразуем Markdown (звездочки) в жирный текст для красоты
+                let formatted = data.result
+                    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // жирный
+                    .replace(/\n/g, '<br>'); // переносы строк
+                
+                resDiv.innerHTML = formatted;
+            }
+            resDiv.style.display = 'block';
+
+        } catch (e) {
+            alert("Ошибка сети");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Проверить решение";
+        }
+    }
+</script>
+
+</body>
+</html>
